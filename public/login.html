@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login - Soccer Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow: hidden;
+      position: relative;
+      background: #0a1a0a;
+    }
+
+    /* Stadium background with animated lights */
+    .stadium-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      background: linear-gradient(180deg, #0a1a0a 0%, #1a3a1a 50%, #0d2e0d 100%);
+      overflow: hidden;
+    }
+
+    /* Animated pitch pattern */
+    .pitch-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(34, 139, 34, 0.1) 2px,
+          rgba(34, 139, 34, 0.1) 4px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 100px,
+          rgba(255, 255, 255, 0.05) 100px,
+          rgba(255, 255, 255, 0.05) 102px
+        );
+      filter: blur(1px);
+      opacity: 0.6;
+    }
+
+    /* Stadium lights */
+    .stadium-lights {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at top, rgba(255, 255, 200, 0.15) 0%, transparent 50%),
+                  radial-gradient(ellipse at 20% 10%, rgba(255, 255, 200, 0.1) 0%, transparent 40%),
+                  radial-gradient(ellipse at 80% 10%, rgba(255, 255, 200, 0.1) 0%, transparent 40%);
+      animation: lightPulse 4s ease-in-out infinite;
+    }
+
+    @keyframes lightPulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    /* Floating particles */
+    .particles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
+
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      animation: float 15s infinite;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+    }
+
+    /* Main container */
+    .container {
+      position: relative;
+      z-index: 10;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Glass morphism card */
+    .card {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 48px 40px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+        0 0 60px rgba(34, 139, 34, 0.2);
+      animation: cardSlideIn 0.6s ease-out;
+    }
+
+    @keyframes cardSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Logo/Title */
+    .logo {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 36px;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 
+        0 0 20px rgba(34, 139, 34, 0.8),
+        0 0 40px rgba(34, 139, 34, 0.4),
+        0 4px 8px rgba(0, 0, 0, 0.5);
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .logo .subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+      font-weight: 300;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* Form styles */
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    input {
+      width: 100%;
+      padding: 16px 20px;
+      font-size: 16px;
+      font-family: 'Inter', sans-serif;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      color: #ffffff;
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    input:focus {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #22c55e;
+      box-shadow: 
+        0 0 0 4px rgba(34, 197, 94, 0.1),
+        0 0 20px rgba(34, 197, 94, 0.3);
+    }
+
+    /* Glowing button */
+    .btn-primary {
+      width: 100%;
+      padding: 16px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: 'Orbitron', sans-serif;
+      color: #ffffff;
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 
+        0 4px 15px rgba(34, 197, 94, 0.4),
+        0 0 30px rgba(34, 197, 94, 0.2);
+      margin-top: 8px;
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .btn-primary:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 6px 25px rgba(34, 197, 94, 0.6),
+        0 0 40px rgba(34, 197, 94, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary span {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Error message */
+    .error {
+      color: #ef4444;
+      font-size: 14px;
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px;
+      display: none;
+    }
+
+    .error.show {
+      display: block;
+      animation: shake 0.5s;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    /* Link */
+    .link {
+      display: block;
+      text-align: center;
+      margin-top: 24px;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    .link:hover {
+      color: #22c55e;
+      text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .card {
+        padding: 36px 28px;
+        border-radius: 20px;
+      }
+
+      .logo h1 {
+        font-size: 28px;
+      }
+
+      input, .btn-primary {
+        padding: 14px 18px;
+      }
+    }
+
+    /* Loading state */
+    .btn-primary.loading {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .btn-primary.loading span::after {
+      content: '...';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+  </style>
+  <script>
+    function createParticles() {
+      const particlesContainer = document.querySelector('.particles');
+      for (let i = 0; i < 20; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 15 + 's';
+        particle.style.animationDuration = (10 + Math.random() * 10) + 's';
+        particlesContainer.appendChild(particle);
+      }
+    }
+
+    async function onSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('err');
+      const submitBtn = document.querySelector('.btn-primary');
+      
+      errorDiv.classList.remove('show');
+      submitBtn.classList.add('loading');
+      
+      try {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) {
+          errorDiv.textContent = data.message || 'Login failed';
+          errorDiv.classList.add('show');
+          submitBtn.classList.remove('loading');
+          return;
+        }
+        
+        window.location.href = '/dashboard';
+      } catch (err) {
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.classList.add('show');
+        submitBtn.classList.remove('loading');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      createParticles();
+    });
+  </script>
+</head>
+<body>
+  <div class="stadium-bg">
+    <div class="stadium-lights"></div>
+    <div class="pitch-overlay"></div>
+    <div class="particles"></div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="logo">
+        <h1>⚽ SOCCER GAME</h1>
+        <div class="subtitle">eSports Arena</div>
+      </div>
+      
+      <form onsubmit="onSubmit(event)">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input 
+            id="email" 
+            type="email" 
+            placeholder="player@example.com" 
+            required 
+            autocomplete="email"
+          />
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input 
+            id="password" 
+            type="password" 
+            placeholder="••••••••" 
+            minlength="6" 
+            required 
+            autocomplete="current-password"
+          />
+        </div>
+        
+        <button type="submit" class="btn-primary">
+          <span>Login</span>
+        </button>
+        
+        <div id="err" class="error"></div>
+      </form>
+      
+      <a class="link" href="/register">Create an account →</a>
+    </div>
+  </div>
+</body>
+</html>

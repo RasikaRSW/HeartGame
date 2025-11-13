@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Endless Runner Soccer Game</title>
+<style>
+  body{margin:0;overflow:hidden;background:#222;color:white;font-family:sans-serif}
+  canvas{display:block;background:linear-gradient(#6bd,#48a)}
+  #hud{position:fixed;top:10px;left:10px;font-size:18px;z-index:5}
+  #userInfo{position:fixed;top:10px;right:10px;font-size:14px;z-index:5;text-align:right}
+  #gameButtons{position:fixed;top:50px;right:10px;z-index:5;display:flex;gap:10px}
+  #gameButtons button{padding:8px 16px;font-size:14px;cursor:pointer;border:none;border-radius:4px;background:#667eea;color:white;transition:background 0.3s}
+  #gameButtons button:hover{background:#5568d3}
+  #gameButtons .btn-logout{background:#e74c3c}
+  #gameButtons .btn-logout:hover{background:#c0392b}
+  #modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;flex-direction:column;color:white;z-index:10}
+  #modal img{max-width:200px;margin:10px 0}
+  input{padding:10px;font-size:20px;width:60px;text-align:center}
+  button{padding:10px 20px;font-size:18px;margin:5px;cursor:pointer}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">Score: <span id="score">0</span> | Lives: <span id="lives">3</span></div>
+<div id="userInfo"><span id="userName">Loading...</span></div>
+<div id="gameButtons">
+  <button class="btn-dashboard" onclick="window.location.href='/dashboard'">Dashboard</button>
+  <button class="btn-logout" onclick="window.location.href='/logout'">Logout</button>
+</div>
+<div id="modal">
+  <h2>Out of Lives — Rescue Challenge</h2>
+  <div id="rescueArea"><p>Loading challenge...</p></div>
+  <input id="rescueInput" placeholder="0-9" maxlength="1">
+  <button id="rescueBtn">Submit</button>
+  <button id="quitBtn">Play again</button>
+</div>
+<script>
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight}
+window.addEventListener('resize',resize);
+resize();
+
+let score=0,lives=3,speed=6;
+const groundHeight=100;
+let player={x:150,y:canvas.height-groundHeight-60,r:35,vy:0,jumping:false,flash:0,rotation:0};
+let obstacles=[];
+let clouds=[];
+let particles=[];
+const gravity=0.9;
+let running=false;
+let frameCount=0;
+const hudScore=document.getElementById('score');
+const hudLives=document.getElementById('lives');
+const modal=document.getElementById('modal');
+const rescueArea=document.getElementById('rescueArea');
+const rescueInput=document.getElementById('rescueInput');
+const rescueBtn=document.getElementById('rescueBtn');
+const quitBtn=document.getElementById('quitBtn');
+let rescueSolution=null;
+let userName='';
+let scoreSaved=false;
+
+async function loadUserInfo(){
+  try{
+    const res=await fetch('/me');
+    if(res.ok){
+      const data=await res.json();
+      userName=data.name||data.email;
+      document.getElementById('userName').textContent=userName;
+    }
+  }catch(e){
+    console.error('Error loading user info:',e);
+  }
+}
+
+async function saveScore(finalScore){
+  if(scoreSaved)return;
+  try{
+    const res=await fetch('/api/scores',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({score:finalScore})
+    });
+    if(res.ok){
+      scoreSaved=true;
+      console.log('Score saved:',finalScore);
+    }
+  }catch(e){
+    console.error('Error saving score:',e);
+  }
+}
+
+loadUserInfo();
+
+function spawnObstacle(){
+  const height=30+Math.random()*50;
+  const width=height*0.8+20;
+  obstacles.push({x:canvas.width,y:canvas.height-groundHeight-height,w:width,h:height,color:'#d22',hit:false});
+}
+
+function spawnCloud(){
+  const y=Math.random()*canvas.height/2;
+  clouds.push({x:canvas.width,y,size:50+Math.random()*70});
+}
+
+function spawnParticles(x,y,color){
+  for(let i=0;i<20;i++){
+    particles.push({x,y,vx:(Math.random()-0.5)*8,vy:(Math.random()-1)*8,life:30,color});
+  }
+}
+
+function drawBackground(){
+  const skyGrad = ctx.createLinearGradient(0,0,0,canvas.height);
+  skyGrad.addColorStop(0,'#8fd3ff');
+  skyGrad.addColorStop(1,'#4aa3f0');
+  ctx.fillStyle=skyGrad;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle='rgba(255,255,255,0.8)';
+  clouds.forEach(c=>{
+    ctx.beginPath();
+    ctx.arc(c.x,c.y,c.size*0.6,0,Math.PI*2);
+    ctx.arc(c.x+c.size*0.5,c.y+5,c.size*0.5,0,Math.PI*2);
+    ctx.fill();
+    c.x-=speed*0.3;
+  });
+  clouds=clouds.filter(c=>c.x>-200);
+  if(Math.random()<0.007)spawnCloud();
+
+  //  grass ground
+  let grad=ctx.createLinearGradient(0,canvas.height-groundHeight,0,canvas.height);
+  grad.addColorStop(0,'#4caf50');
+  grad.addColorStop(1,'#1b5e20');
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,canvas.height-groundHeight,canvas.width,groundHeight);
+
+  // grass texture
+  for(let i=0;i<canvas.width;i+=20){
+    ctx.strokeStyle='rgba(0,100,0,0.4)';
+    ctx.beginPath();
+    ctx.moveTo(i,canvas.height-groundHeight);
+    ctx.lineTo(i+5,canvas.height-groundHeight-10-Math.random()*10);
+    ctx.stroke();
+  }
+}
+
+function drawSoccerBall(){
+  ctx.save();
+  ctx.translate(player.x+player.r,player.y+player.r);
+  ctx.rotate(player.rotation);
+  ctx.beginPath();
+  ctx.arc(0,0,player.r,0,Math.PI*2);
+  ctx.fillStyle='white';
+  ctx.fill();
+  ctx.lineWidth=2;
+  ctx.strokeStyle='black';
+  ctx.stroke();
+  // simple soccer pattern
+  ctx.fillStyle='black';
+  for(let i=0;i<6;i++){
+    const angle=i*Math.PI/3;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.arc(0,0,player.r*0.6,angle,angle+Math.PI/6);
+    ctx.lineTo(0,0);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawObstacles(){
+  obstacles.forEach(o=>{
+    o.x-=speed;
+    if(!o.hit){
+      ctx.fillStyle=o.color;
+      ctx.beginPath();
+      ctx.roundRect(o.x,o.y,o.w,o.h,5);
+      ctx.fill();
+    }
+  });
+  obstacles=obstacles.filter(o=>(o.x+o.w>0)&&(!o.removed));
+}
+
+function drawParticles(){
+  particles.forEach(p=>{
+    ctx.fillStyle=p.color;
+    ctx.globalAlpha=p.life/30;
+    ctx.fillRect(p.x,p.y,4,4);
+    p.x+=p.vx;
+    p.y+=p.vy;
+    p.vy+=0.3;
+    p.life--;
+  });
+  ctx.globalAlpha=1;
+  particles=particles.filter(p=>p.life>0);
+}
+
+function update(){
+  if(!running)return;
+  frameCount++;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawBackground();
+  drawSoccerBall();
+  drawObstacles();
+  drawParticles();
+
+  // physics
+  player.y+=player.vy;
+  player.vy+=gravity;
+  player.rotation+=0.1;
+  if(player.y>canvas.height-groundHeight-player.r*2){
+    player.y=canvas.height-groundHeight-player.r*2;
+    player.vy=0;
+    player.jumping=false;
+  }
+
+  for(let i=0;i<obstacles.length;i++){
+    const o=obstacles[i];
+    if(!o.hit&&player.x+player.r*2>o.x&&player.x<o.x+o.w&&player.y+player.r*2>o.y&&player.y<o.y+o.h){
+      o.hit=true;
+      o.removed=true;
+      spawnParticles(o.x+o.w/2,o.y+o.h/2,'#ff4500');
+      player.flash=30;
+      lives--;
+      hudLives.textContent=lives;
+      if(lives<=0){running=false;saveScore(score);openRescue();}
+      break;
+    }
+  }
+
+  score++;
+  hudScore.textContent=score;
+  if(frameCount%120===0)spawnObstacle();
+  requestAnimationFrame(update);
+}
+
+window.addEventListener('keydown',e=>{
+  if((e.code==='Space'||e.code==='ArrowUp')&&!player.jumping){player.vy=-20;player.jumping=true;}
+});
+
+async function openRescue(){
+  modal.style.display='flex';
+  rescueArea.innerHTML='<p>Loading challenge...</p>';
+  try{
+    const res=await fetch('https://marcconrad.com/uob/heart/api.php?_='+Date.now());
+    const j=await res.json();
+    rescueSolution=String(j.solution);
+    rescueArea.innerHTML='<img src="'+j.question+'"><p>Guess the digit to continue!</p>';
+  }catch(e){
+    rescueArea.innerHTML='<p>Failed to load challenge.</p>';
+  }
+}
+
+rescueBtn.onclick=()=>{
+  const val=rescueInput.value.trim();
+  if(val===rescueSolution){
+    modal.style.display='none';
+    lives=1;
+    hudLives.textContent=lives;
+    scoreSaved=false;
+    running=true;
+    update();
+  }else{
+    rescueArea.innerHTML+='<p>Wrong! Game Over. Final Score: '+score+'</p>';
+    rescueBtn.disabled=true;
+    saveScore(score);
+  }
+};
+
+quitBtn.onclick=()=>{
+  saveScore(score);
+  modal.style.display='none';
+  score=0;
+  lives=3;
+  speed=6;
+  scoreSaved=false;
+  player={x:150,y:canvas.height-groundHeight-60,r:35,vy:0,jumping:false,flash:0,rotation:0};
+  obstacles=[];
+  clouds=[];
+  particles=[];
+  hudScore.textContent=score;
+  hudLives.textContent=lives;
+  rescueBtn.disabled=false;
+  running=true;
+  frameCount=0;
+  update();
+};
+
+function startGame(){
+  clouds=[];
+  for(let i=0;i<5;i++)spawnCloud();
+  obstacles=[];
+  score=0;
+  scoreSaved=false;
+  hudScore.textContent=0;
+  hudLives.textContent=lives;
+  running=true;
+  frameCount=0;
+  requestAnimationFrame(update);
+}
+
+startGame();
+</script>
+</body>
+</html>
