@@ -547,15 +547,14 @@
     
     loadDashboard();
     
-    // Handle window resize for responsive layout
+   
     let resizeTimer;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
         const container = document.getElementById('scoresContainer');
         if (container.children.length > 0) {
-          // Reload to change layout if needed
-          // This is optional - you can remove if you prefer a fixed layout
+          
         }
       }, 250);
     });
